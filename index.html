@@ -46,6 +46,11 @@
   @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
   @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
   @keyframes flyIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+  @keyframes tlPulse{
+    0%{transform:scale(1)}
+    50%{transform:scale(1.18)}
+    100%{transform:scale(1.06)}
+  }
   .shake{animation:shake .45s;}
 
   .menu-hero{text-align:center;margin:10px 0 20px;}
@@ -206,6 +211,46 @@
   .revealed-shape{display:flex;flex-direction:column;align-items:center;animation:pop .5s;}
   .reveal-label{font-size:28px;font-weight:900;color:var(--ink);margin-top:6px;}
 
+  /* ===== 游戏10 形状绕口令 ===== */
+  .tl-levels{
+    display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:14px 0 0;
+  }
+  .tl-level-btn{
+    border:none;border-radius:999px;padding:9px 20px;font-weight:900;cursor:pointer;
+    background:#fff;box-shadow:0 4px 0 var(--shadow);font-size:15px;color:var(--ink);
+    transition:transform .15s;
+  }
+  .tl-level-btn:hover{transform:translateY(-2px);}
+  .tl-level-btn.easy.active{background:var(--green);color:#fff;box-shadow:0 4px 0 #2b8a3e;}
+  .tl-level-btn.medium.active{background:var(--yellow);color:#3d2b00;box-shadow:0 4px 0 #cc8f00;}
+  .tl-level-btn.hard.active{background:var(--red);color:#fff;box-shadow:0 4px 0 #c92a2a;}
+
+  .tl-board{
+    display:flex;flex-wrap:wrap;gap:10px;justify-content:center;
+    background:linear-gradient(#fff,#f0fff4);
+    border-radius:20px;padding:16px;min-height:200px;
+  }
+  .tl-card{
+    border:none;background:white;border-radius:16px;padding:6px 6px 2px;cursor:pointer;
+    box-shadow:0 4px 0 var(--shadow);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    transition:transform .15s, box-shadow .15s;
+    min-width:74px;
+  }
+  .tl-card:hover{transform:translateY(-3px);}
+  .tl-word{
+    font-size:12px;font-weight:800;color:#6c757d;opacity:0;
+    height:16px;line-height:16px;transition:.2s;white-space:nowrap;
+  }
+  .tl-card.show-word .tl-word{opacity:1;color:var(--ink);}
+  .tl-card.tl-active{
+    animation:tlPulse .6s;
+    box-shadow:0 0 0 5px #ffe066, 0 0 24px #ffd43b;
+    transform:translateY(-4px);
+  }
+  .tl-card.tl-active .tl-word{opacity:1;color:var(--ink);}
+  .tl-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px;}
+
   .toast{
     position:fixed;left:50%;top:86px;transform:translate(-50%,-20px);
     background:var(--ink);color:white;padding:12px 22px;border-radius:999px;
@@ -224,6 +269,8 @@
     .btn{padding:11px 16px;font-size:16px;}
     .shape-btn{min-width:70px;padding:8px;}
     .lot-label{font-size:16px;}
+    .tl-card{min-width:64px;}
+    .tl-board{gap:8px;padding:10px;}
   }
 </style>
 </head>
@@ -286,6 +333,11 @@
         <strong>9. 魔法袋盲盒</strong>
         <small>点开盲盒，猜猜里面是什么形状。</small>
       </button>
+      <button class="menu-card" onclick="showScreen('game10')">
+        <span class="menu-emoji">🎤</span>
+        <strong>10. 形状绕口令</strong>
+        <small>Look and say!<br>看形状，快速念出它的英文名。</small>
+      </button>
     </div>
 
     <div class="sentence-box">
@@ -302,6 +354,7 @@
   <section id="game4" class="screen"><div id="g4-area" class="game-wrap"></div></section>
   <section id="game6" class="screen"><div id="g6-area" class="game-wrap"></div></section>
   <section id="game9" class="screen"><div id="g9-area" class="game-wrap"></div></section>
+  <section id="game10" class="screen"><div id="g10-area" class="game-wrap"></div></section>
 </main>
 
 <script>
@@ -322,6 +375,12 @@ const $$ = sel => [...document.querySelectorAll(sel)];
 let stars = 0;
 try { stars = Number(localStorage.getItem('shapeStars') || 0) || 0; } catch(e) {}
 let soundOn = true;
+
+/* 游戏10 状态 */
+let g10List = [];
+let g10Busy = false;
+let g10Timers = [];
+let g10Level = 'easy';
 
 function shapeColor(shape){
   const s = SHAPES.find(x => x.id === shape);
@@ -387,10 +446,11 @@ function addStar(){
   }
 }
 
-function speak(text){
+/* interrupt = true 时打断上一条语音；跟读模式传 false */
+function speak(text, interrupt = true){
   if(!soundOn || !window.speechSynthesis) return;
   try{
-    window.speechSynthesis.cancel();
+    if(interrupt) window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'en-US';
     u.rate = 0.85;
@@ -410,6 +470,9 @@ function showToast(msg, type = 'info'){
 
 function showScreen(id){
   if(window.speechSynthesis) window.speechSynthesis.cancel();
+  clearG10Timers();
+  g10Busy = false;
+
   $$('.screen').forEach(s => s.classList.remove('active'));
   const screen = document.getElementById(id);
   if(screen) screen.classList.add('active');
@@ -420,6 +483,7 @@ function showScreen(id){
   else if(id === 'game4') startGame4();
   else if(id === 'game6') startGame6();
   else if(id === 'game9') startGame9();
+  else if(id === 'game10') startGame10();
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1078,6 +1142,172 @@ function revealG9(){
       <div class="reveal-label">${g9State.actual.en}</div>
     </div>
   `;
+}
+
+/* ================= 游戏10：形状绕口令（难度分级） ================= */
+function clearG10Timers(){
+  g10Timers.forEach(t => clearTimeout(t));
+  g10Timers = [];
+}
+
+/*
+  难度说明：
+  - 简单 easy：5 个，5 种不同形状各 1 次（不重复）
+  - 中级 medium：8 个，7 种形状各 1 次 + 随机 1 种再重复 1 次
+                （只有 7 种形状，8 个无法完全做到不重复，所以只有 1 个重复）
+  - 困难 hard：10 个，随机重复，每种出现 2–3 次
+*/
+function generateTongueList(level){
+  if(level === 'easy'){
+    const chosen = shuffle([...SHAPES]).slice(0, 5);
+    return shuffle([...chosen]);
+  }
+
+  if(level === 'medium'){
+    const all = shuffle([...SHAPES]); // 7 种形状全部用一次
+    const extra = pick(all);          // 再随机重复其中 1 个
+    return shuffle([...all, extra]);  // 共 8 个
+  }
+
+  /* hard：10 个，随机重复 2–3 次 */
+  const chosen = shuffle([...SHAPES]);
+  const useFive = Math.random() < 0.5;
+  let shapes, counts;
+  if(useFive){
+    /* 5 种形状 × 2 次 = 10 个 */
+    shapes = chosen.slice(0, 5);
+    counts = [2,2,2,2,2];
+  }else{
+    /* 4 种形状，2+2+3+3 = 10 个 */
+    shapes = chosen.slice(0, 4);
+    counts = shuffle([2,2,3,3]);
+  }
+  const list = [];
+  shapes.forEach((s, i) => {
+    for(let k = 0; k < counts[i]; k++) list.push(s);
+  });
+  return shuffle(list);
+}
+
+const G10_LEVEL_DESC = {
+  easy:   '简单：5 个形状，都不重复。看形状，大声念出英文吧！',
+  medium: '中级：8 个形状，7 种各出现一次，再重复 1 个。看形状，大声念！',
+  hard:   '困难：10 个形状，会重复出现，看仔细哦！'
+};
+
+function startGame10(){
+  clearG10Timers();
+  g10Busy = false;
+  const area = document.getElementById('g10-area');
+  area.innerHTML = `
+    <div class="game-head">
+      <h2>🎤 形状绕口令</h2>
+      <p class="sub">Look and say! 看着形状，快速念出它的英文名。</p>
+    </div>
+    <div class="tl-levels">
+      <button class="tl-level-btn easy" data-level="easy" onclick="setG10Level('easy')">🟢 简单 · 5个</button>
+      <button class="tl-level-btn medium" data-level="medium" onclick="setG10Level('medium')">🟡 中级 · 8个</button>
+      <button class="tl-level-btn hard" data-level="hard" onclick="setG10Level('hard')">🔴 困难 · 10个</button>
+    </div>
+    <div class="prompt-bar">
+      <div class="prompt-en">Say it fast!</div>
+      <div class="prompt-cn" id="g10-desc"></div>
+    </div>
+    <div class="tl-board" id="g10-board"></div>
+    <div class="feedback" id="g10-feedback">准备好了吗？</div>
+    <div class="tl-actions">
+      <button class="btn" id="g10-follow">▶️ 跟读挑战</button>
+      <button class="btn yes" id="g10-done">✅ 我念完啦</button>
+      <button class="btn secondary" id="g10-new">🔄 换一题</button>
+    </div>
+  `;
+  updateG10LevelButtons();
+  newGame10Round();
+}
+
+function updateG10LevelButtons(){
+  $$('#g10-area .tl-level-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.level === g10Level);
+  });
+  const desc = document.getElementById('g10-desc');
+  if(desc) desc.textContent = G10_LEVEL_DESC[g10Level];
+}
+
+function setG10Level(level){
+  if(g10Busy) return;
+  if(level === g10Level){
+    newGame10Round();
+    return;
+  }
+  g10Level = level;
+  updateG10LevelButtons();
+  newGame10Round();
+}
+
+function newGame10Round(){
+  clearG10Timers();
+  g10Busy = false;
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+
+  g10List = generateTongueList(g10Level);
+  const board = document.getElementById('g10-board');
+  board.innerHTML = '';
+
+  g10List.forEach((s, idx) => {
+    const card = document.createElement('button');
+    card.className = 'tl-card';
+    card.dataset.idx = idx;
+    card.innerHTML = shapeSVG(s.id, 62) + `<span class="tl-word">${s.en}</span>`;
+    card.onclick = () => {
+      card.classList.add('show-word');
+      speak(s.en);
+    };
+    board.appendChild(card);
+  });
+
+  document.getElementById('g10-feedback').textContent = '看形状，大声念出英文吧！';
+
+  document.getElementById('g10-follow').onclick = runG10Follow;
+  document.getElementById('g10-done').onclick = () => {
+    if(g10Busy) return;
+    addStar();
+    showToast('⭐ +1  太棒了！', 'success');
+    speak('Great job!');
+    document.getElementById('g10-feedback').textContent = 'Great job! 下一题来啦！';
+    setTimeout(() => newGame10Round(), 1300);
+  };
+  document.getElementById('g10-new').onclick = () => newGame10Round();
+}
+
+function runG10Follow(){
+  if(g10Busy) return;
+  clearG10Timers();
+  g10Busy = true;
+
+  const cards = $$('#g10-board .tl-card');
+  if(!cards.length){ g10Busy = false; return; }
+
+  const feedback = document.getElementById('g10-feedback');
+  feedback.textContent = '跟着一起念！';
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+
+  const step = 1150;
+  cards.forEach((card, i) => {
+    const t = setTimeout(() => {
+      cards.forEach(c => c.classList.remove('tl-active'));
+      card.classList.add('tl-active', 'show-word');
+      speak(g10List[i].en, false);
+    }, i * step);
+    g10Timers.push(t);
+  });
+
+  const endT = setTimeout(() => {
+    cards.forEach(c => c.classList.remove('tl-active'));
+    g10Busy = false;
+    feedback.textContent = '念得真棒！点“我念完啦”获得星星。';
+    speak('Great job!', false);
+  }, cards.length * step + 250);
+  g10Timers.push(endT);
 }
 </script>
 </body>
