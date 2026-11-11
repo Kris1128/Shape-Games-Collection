@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>形状游戏乐园</title>
+<style>
+  :root{
+    --ink:#1d3557;
+    --blue:#4d96ff;
+    --green:#51cf66;
+    --red:#ff6b6b;
+    --yellow:#ffb703;
+    --shadow:#d0d7de;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Comic Sans MS","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    background:linear-gradient(135deg,#e0f7ff,#fff6e5 55%,#f3e8ff);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  #topbar{
+    position:sticky;top:0;z-index:100;
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    padding:10px 16px;
+    background:rgba(255,255,255,.82);
+    backdrop-filter:blur(10px);
+  }
+  .top-btn{
+    border:none;border-radius:14px;padding:9px 14px;font-weight:800;cursor:pointer;
+    background:white;box-shadow:0 3px 0 var(--shadow);font-size:15px;color:var(--ink);
+  }
+  .top-btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--shadow);}
+  .stars{
+    font-size:22px;font-weight:900;background:#fff3bf;padding:8px 16px;border-radius:999px;
+    white-space:nowrap;
+  }
+  .star-pop{animation:pop .5s;}
+  #app{max-width:1100px;margin:0 auto;padding:18px;}
+  .screen{display:none;}
+  .screen.active{display:block;animation:fadeIn .25s;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.18)}100%{transform:scale(1)}}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  @keyframes flyIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+  .shake{animation:shake .45s;}
+
+  .menu-hero{text-align:center;margin:10px 0 20px;}
+  .menu-hero h1{font-size:clamp(28px,5vw,48px);margin:0 0 8px;}
+  .menu-hero p{color:#5c6773;font-size:17px;}
+  .word-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px;}
+  .word-chip{
+    background:white;border-radius:999px;padding:8px 14px;font-weight:800;
+    box-shadow:0 3px 0 var(--shadow);font-size:14px;
+  }
+  .menu-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;
+  }
+  .menu-card{
+    border:none;background:white;border-radius:24px;padding:18px;cursor:pointer;
+    text-align:left;box-shadow:0 6px 0 var(--shadow);transition:transform .15s;
+    display:flex;flex-direction:column;gap:6px;color:var(--ink);
+  }
+  .menu-card:hover{transform:translateY(-4px);}
+  .menu-emoji{font-size:38px;}
+  .menu-card strong{font-size:22px;}
+  .menu-card small{color:#6c757d;font-size:14px;line-height:1.4;}
+  .sentence-box{
+    margin-top:22px;background:#fff8d6;border-radius:20px;padding:16px 20px;
+    border:3px dashed var(--yellow);
+  }
+  .sentence-box h3{margin:0 0 8px;}
+  .sentence-box p{margin:6px 0;font-weight:700;}
+
+  .game-wrap{
+    background:white;border-radius:28px;padding:22px;
+    box-shadow:0 10px 30px rgba(29,53,87,.12);
+  }
+  .game-head h2{margin:0 0 4px;font-size:clamp(24px,4vw,34px);}
+  .game-head p{margin:0;color:#6c757d;font-size:15px;}
+  .prompt-bar{
+    background:#fff8d6;border:3px dashed var(--yellow);border-radius:20px;
+    padding:12px;text-align:center;margin:14px 0;
+  }
+  .prompt-en{font-size:clamp(22px,4vw,36px);font-weight:900;color:var(--ink);line-height:1.25;}
+  .prompt-cn{font-size:16px;color:#666;margin-top:4px;}
+  .feedback{
+    margin-top:14px;font-size:20px;font-weight:800;color:#2b8a3e;
+    text-align:center;min-height:30px;
+  }
+  .btn{
+    border:none;border-radius:16px;padding:12px 22px;font-size:18px;font-weight:900;
+    cursor:pointer;background:var(--blue);color:white;box-shadow:0 5px 0 #2f6fcc;
+  }
+  .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #2f6fcc;}
+  .btn.secondary{background:#e9ecef;color:#333;box-shadow:0 5px 0 #c9ced6;}
+  .btn.yes{background:var(--green);box-shadow:0 5px 0 #2b8a3e;}
+  .btn.no{background:var(--red);box-shadow:0 5px 0 #c92a2a;}
+
+  .detective-scene{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
+    background:linear-gradient(#d8f3ff,#f0fff4);
+    border-radius:20px;padding:16px;min-height:300px;
+  }
+  .shape-card{
+    border:none;background:white;border-radius:20px;padding:8px;cursor:pointer;
+    box-shadow:0 4px 0 var(--shadow);transition:transform .15s;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .shape-card:hover{transform:translateY(-3px) scale(1.03);}
+  .shape-card.correct{
+    animation:pop .6s;
+    box-shadow:0 0 0 6px #ffe066,0 0 30px #ffd43b;
+  }
+
+  /* ===== 游戏2 形状制造机 ===== */
+  .maker-canvas{
+    min-height:210px;border:5px dashed #b2f2bb;border-radius:24px;
+    background:#f8fff9;display:flex;align-items:center;justify-content:center;
+    margin:16px 0;text-align:center;padding:16px;
+  }
+  .g2-build{display:flex;align-items:center;justify-content:center;}
+  .g2-half-slot{
+    width:86px;height:166px;
+    border:3px dashed #b2f2bb;
+    background:#fff;
+    display:flex;align-items:center;justify-content:center;
+    position:relative;
+  }
+  .g2-half-slot.left{border-radius:16px 0 0 16px;}
+  .g2-half-slot.right{border-radius:0 16px 16px 0;margin-left:-3px;}
+  .g2-half-slot.filled{border-color:transparent;background:transparent;}
+  .g2-half-slot.filled svg{animation:flyIn .35s;}
+  .slot-hint{font-size:26px;font-weight:900;color:#c6f0d0;}
+
+  .shape-palette{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;}
+  .frag-btn{
+    border:none;background:#fff;border-radius:16px;padding:6px;cursor:pointer;
+    box-shadow:0 4px 0 var(--shadow);display:flex;align-items:center;justify-content:center;
+    transition:transform .15s;
+  }
+  .frag-btn:hover{transform:translateY(-3px);}
+
+  /* ===== 其它 ===== */
+  .shape-btn{
+    border:none;background:#fff;border-radius:18px;padding:10px 12px;cursor:pointer;
+    box-shadow:0 4px 0 var(--shadow);display:flex;flex-direction:column;align-items:center;
+    gap:4px;min-width:82px;font-weight:800;color:var(--ink);font-size:14px;
+  }
+  .shape-btn:hover{transform:translateY(-2px);}
+  .shape-btn.correct{box-shadow:0 0 0 5px #ffe066;}
+
+  .shadow-stage,.magic-stage{
+    min-height:230px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 40%,#fff,#e7f5ff);
+    border-radius:24px;margin:14px 0;position:relative;padding:16px;
+  }
+  .shadow-shape{position:relative;display:flex;align-items:center;justify-content:center;}
+  .yesno-row{display:flex;gap:20px;justify-content:center;margin:12px 0;}
+  .choice-title{text-align:center;font-weight:900;margin-top:10px;}
+  .choice-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:10px;}
+
+  .parking-cards{
+    display:flex;flex-wrap:wrap;gap:10px;justify-content:center;
+    min-height:100px;padding:12px;background:#fff9db;border-radius:20px;
+  }
+  .parking-card{
+    border:none;background:white;border-radius:16px;padding:6px;cursor:pointer;
+    box-shadow:0 4px 0 var(--shadow);
+  }
+  .parking-card.selected{outline:5px solid var(--blue);transform:translateY(-4px);}
+  .parking-lots{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px;}
+  .parking-lot{
+    border:4px dashed #adb5bd;border-radius:20px;background:#f8f9fa;padding:10px;
+    cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;
+    font-weight:900;color:var(--ink);min-height:96px;
+  }
+  .parking-lot.correct{animation:pop .6s;border-color:var(--green);background:#ebfbee;}
+  .lot-label{font-size:19px;font-weight:900;letter-spacing:.5px;padding:10px 4px;}
+  .lot-count{
+    position:absolute;top:6px;right:10px;background:var(--blue);color:white;
+    border-radius:50%;width:24px;height:24px;display:flex;align-items:center;
+    justify-content:center;font-size:14px;
+  }
+
+  .match-board{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  .match-col{background:#f8f9fa;border-radius:20px;padding:12px;}
+  .match-col h3{text-align:center;margin:4px 0 10px;}
+  .match-list{display:flex;flex-direction:column;gap:10px;}
+  .match-card{
+    border:none;background:white;border-radius:16px;padding:8px;
+    display:flex;align-items:center;gap:12px;cursor:pointer;
+    box-shadow:0 4px 0 var(--shadow);font-weight:900;color:var(--ink);
+  }
+  .match-card.selected{outline:5px solid var(--blue);}
+  .match-card.matched{opacity:.45;background:#d3f9d8;box-shadow:none;}
+
+  .magic-bag{
+    font-size:110px;cursor:pointer;user-select:none;
+    animation:bounce 1.2s infinite;line-height:1;
+  }
+  .covered-shape{position:relative;display:flex;align-items:center;justify-content:center;}
+  .revealed-shape{display:flex;flex-direction:column;align-items:center;animation:pop .5s;}
+  .reveal-label{font-size:28px;font-weight:900;color:var(--ink);margin-top:6px;}
+
+  .toast{
+    position:fixed;left:50%;top:86px;transform:translate(-50%,-20px);
+    background:var(--ink);color:white;padding:12px 22px;border-radius:999px;
+    font-weight:900;opacity:0;pointer-events:none;transition:.25s;z-index:999;
+    white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+  .toast.success{background:#2b8a3e;}
+  .toast.warn{background:#e67700;}
+
+  @media (max-width:600px){
+    .parking-lots{grid-template-columns:repeat(2,1fr);}
+    .match-board{grid-template-columns:1fr;}
+    .detective-scene{grid-template-columns:repeat(3,1fr);gap:8px;padding:10px;}
+    .game-wrap{padding:14px;border-radius:22px;}
+    .btn{padding:11px 16px;font-size:16px;}
+    .shape-btn{min-width:70px;padding:8px;}
+    .lot-label{font-size:16px;}
+  }
+</style>
+</head>
+<body>
+
+<header id="topbar">
+  <button id="homeBtn" class="top-btn">🏠 菜单</button>
+  <div id="stars" class="stars">⭐ 0</div>
+  <button id="soundBtn" class="top-btn">🔊 语音开</button>
+</header>
+
+<div id="toast" class="toast"></div>
+
+<main id="app">
+  <!-- 菜单 -->
+  <section id="menu" class="screen active">
+    <div class="menu-hero">
+      <h1>🌈 形状游戏乐园</h1>
+      <p>选一个游戏，和形状宝宝一起玩吧！</p>
+      <div class="word-chips">
+        <span class="word-chip">shape 形状</span>
+        <span class="word-chip">circle 圆形</span>
+        <span class="word-chip">square 正方形</span>
+        <span class="word-chip">triangle 三角形</span>
+        <span class="word-chip">rectangle 长方形</span>
+        <span class="word-chip">diamond 菱形</span>
+        <span class="word-chip">heart 爱心形</span>
+        <span class="word-chip">star 五角星形</span>
+      </div>
+    </div>
+
+    <div class="menu-grid">
+      <button class="menu-card" onclick="showScreen('game1')">
+        <span class="menu-emoji">🔍</span>
+        <strong>1. 形状侦探</strong>
+        <small>Can you find a circle?<br>点一点，找出目标形状。</small>
+      </button>
+      <button class="menu-card" onclick="showScreen('game2')">
+        <span class="menu-emoji">🛠️</span>
+        <strong>2. 形状制造机</strong>
+        <small>Can you make a circle?<br>找到两片碎片，拼成完整形状。</small>
+      </button>
+      <button class="menu-card" onclick="showScreen('game3')">
+        <span class="menu-emoji">🌑</span>
+        <strong>3. 猜猜我是谁</strong>
+        <small>Is this a triangle?<br>看影子，判断 Yes / No。</small>
+      </button>
+      <button class="menu-card" onclick="showScreen('game4')">
+        <span class="menu-emoji">🚗</span>
+        <strong>4. 形状停车场</strong>
+        <small>把形状卡片停到对应停车场。</small>
+      </button>
+      <button class="menu-card" onclick="showScreen('game6')">
+        <span class="menu-emoji">🧩</span>
+        <strong>6. 形状影子配对</strong>
+        <small>彩色形状和灰色影子配对。</small>
+      </button>
+      <button class="menu-card" onclick="showScreen('game9')">
+        <span class="menu-emoji">🎁</span>
+        <strong>9. 魔法袋盲盒</strong>
+        <small>点开盲盒，猜猜里面是什么形状。</small>
+      </button>
+    </div>
+
+    <div class="sentence-box">
+      <h3>重点句型</h3>
+      <p>1. Is this a triangle? Yes. / No, it’s a ...</p>
+      <p>2. Can you make a circle? Yes, I can.</p>
+      <p>3. Can you find a circle? Yes, I can.</p>
+    </div>
+  </section>
+
+  <section id="game1" class="screen"><div id="g1-area" class="game-wrap"></div></section>
+  <section id="game2" class="screen"><div id="g2-area" class="game-wrap"></div></section>
+  <section id="game3" class="screen"><div id="g3-area" class="game-wrap"></div></section>
+  <section id="game4" class="screen"><div id="g4-area" class="game-wrap"></div></section>
+  <section id="game6" class="screen"><div id="g6-area" class="game-wrap"></div></section>
+  <section id="game9" class="screen"><div id="g9-area" class="game-wrap"></div></section>
+</main>
+
+<script>
+/* ================= 基础数据 ================= */
+const SHAPES = [
+  { id:'circle',    en:'circle',    cn:'圆形',     color:'#ff6b6b' },
+  { id:'square',    en:'square',    cn:'正方形',   color:'#4d96ff' },
+  { id:'triangle',  en:'triangle',  cn:'三角形',   color:'#ffb703' },
+  { id:'rectangle', en:'rectangle', cn:'长方形',   color:'#2ec4b6' },
+  { id:'diamond',   en:'diamond',   cn:'菱形',     color:'#9b5de5' },
+  { id:'heart',     en:'heart',     cn:'爱心形',   color:'#f15bb5' },
+  { id:'star',      en:'star',      cn:'五角星形', color:'#f9c74f' }
+];
+
+const $ = sel => document.querySelector(sel);
+const $$ = sel => [...document.querySelectorAll(sel)];
+
+let stars = 0;
+try { stars = Number(localStorage.getItem('shapeStars') || 0) || 0; } catch(e) {}
+let soundOn = true;
+
+function shapeColor(shape){
+  const s = SHAPES.find(x => x.id === shape);
+  return s ? s.color : '#4d96ff';
+}
+
+/* 形状内部绘制内容 */
+function shapeContent(shape, color, muted){
+  const c = muted ? '#c9ced6' : (color || shapeColor(shape));
+  const stroke = muted ? '#aeb6c2' : 'rgba(0,0,0,.18)';
+  switch(shape){
+    case 'circle':
+      return `<circle cx="50" cy="50" r="45" fill="${c}" stroke="${stroke}" stroke-width="2"/>`;
+    case 'square':
+      return `<rect x="8" y="8" width="84" height="84" rx="6" fill="${c}" stroke="${stroke}" stroke-width="2"/>`;
+    case 'triangle':
+      return `<polygon points="50,5 95,92 5,92" fill="${c}" stroke="${stroke}" stroke-width="2" stroke-linejoin="round"/>`;
+    case 'rectangle':
+      return `<rect x="5" y="22" width="90" height="56" rx="6" fill="${c}" stroke="${stroke}" stroke-width="2"/>`;
+    case 'diamond':
+      return `<polygon points="50,4 96,50 50,96 4,50" fill="${c}" stroke="${stroke}" stroke-width="2" stroke-linejoin="round"/>`;
+    case 'heart':
+      return `<path d="M50 90 C8 62 4 36 24 22 C38 12 50 24 50 32 C50 24 62 12 76 22 C96 36 92 62 50 90 Z" fill="${c}" stroke="${stroke}" stroke-width="2"/>`;
+    case 'star':
+      return `<polygon points="50,3 61,36 96,36 68,57 78,92 50,71 22,92 32,57 4,36 39,36" fill="${c}" stroke="${stroke}" stroke-width="2" stroke-linejoin="round"/>`;
+    default:
+      return '';
+  }
+}
+
+function shapeSVG(shape, size = 80, color = null, extraClass = '', muted = false){
+  return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" class="${extraClass}" aria-label="${shape}" role="img">${shapeContent(shape, color, muted)}</svg>`;
+}
+
+/* 只显示形状的一半：side = 'left' | 'right' */
+function halfShapeSVG(shape, side, w, h, color = null){
+  const vb = side === 'left' ? '0 0 50 100' : '50 0 50 100';
+  return `<svg viewBox="${vb}" width="${w}" height="${h}" aria-hidden="true">${shapeContent(shape, color, false)}</svg>`;
+}
+
+function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+function shuffle(arr){
+  for(let i = arr.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function updateStars(){
+  const el = document.getElementById('stars');
+  if(el) el.textContent = `⭐ ${stars}`;
+}
+function addStar(){
+  stars++;
+  try { localStorage.setItem('shapeStars', stars); } catch(e) {}
+  updateStars();
+  const el = document.getElementById('stars');
+  if(el){
+    el.classList.remove('star-pop');
+    void el.offsetWidth;
+    el.classList.add('star-pop');
+  }
+}
+
+function speak(text){
+  if(!soundOn || !window.speechSynthesis) return;
+  try{
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US';
+    u.rate = 0.85;
+    u.pitch = 1.1;
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+let toastTimer = null;
+function showToast(msg, type = 'info'){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = 'toast'; }, 1600);
+}
+
+function showScreen(id){
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+  $$('.screen').forEach(s => s.classList.remove('active'));
+  const screen = document.getElementById(id);
+  if(screen) screen.classList.add('active');
+
+  if(id === 'game1') startGame1();
+  else if(id === 'game2') startGame2();
+  else if(id === 'game3') startGame3();
+  else if(id === 'game4') startGame4();
+  else if(id === 'game6') startGame6();
+  else if(id === 'game9') startGame9();
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.getElementById('homeBtn').addEventListener('click', () => showScreen('menu'));
+document.getElementById('soundBtn').addEventListener('click', () => {
+  soundOn = !soundOn;
+  document.getElementById('soundBtn').textContent = soundOn ? '🔊 语音开' : '🔇 语音关';
+  if(!soundOn && window.speechSynthesis) window.speechSynthesis.cancel();
+});
+updateStars();
+
+/* ================= 游戏1：形状侦探 ================= */
+let g1Target = null;
+let g1Lock = false;
+
+function startGame1(){
+  g1Lock = false;
+  const area = document.getElementById('g1-area');
+  area.innerHTML = `
+    <div class="game-head">
+      <h2>🔍 形状侦探</h2>
+      <p class="sub">听一听，点一点：找到目标形状！</p>
+    </div>
+    <div class="prompt-bar">
+      <div class="prompt-en" id="g1-prompt"></div>
+      <div class="prompt-cn" id="g1-cn"></div>
+    </div>
+    <div class="detective-scene" id="g1-scene"></div>
+    <div class="feedback" id="g1-feedback">点一点场景里的形状吧！</div>
+    <button class="btn secondary" onclick="startGame1()">🔄 换一题</button>
+  `;
+  newGame1Round();
+}
+
+function newGame1Round(){
+  const target = pick(SHAPES);
+  g1Target = target.id;
+  document.getElementById('g1-prompt').textContent = `Can you find a ${target.en}?`;
+  document.getElementById('g1-cn').textContent = `你能找到${target.cn}吗？`;
+  speak(`Can you find a ${target.en}?`);
+
+  const scene = document.getElementById('g1-scene');
+  scene.innerHTML = '';
+
+  const list = [target, target];
+  while(list.length < 9) list.push(pick(SHAPES));
+  shuffle(list);
+
+  list.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'shape-card detective-item';
+    btn.dataset.shape = s.id;
+    btn.innerHTML = shapeSVG(s.id, 70);
+    btn.onclick = () => handleG1Click(btn, s);
+    scene.appendChild(btn);
+  });
+
+  document.getElementById('g1-feedback').textContent = '点一点场景里的形状吧！';
+}
+
+function handleG1Click(btn, s){
+  if(g1Lock) return;
+  if(s.id === g1Target){
+    g1Lock = true;
+    btn.classList.add('correct');
+    addStar();
+    document.getElementById('g1-feedback').textContent = 'Yes, I can! 太棒了！';
+    speak('Yes, I can!');
+    showToast('⭐ +1  Yes, I can!', 'success');
+    setTimeout(() => {
+      g1Lock = false;
+      newGame1Round();
+    }, 1200);
+  }else{
+    btn.classList.add('shake');
+    setTimeout(() => btn.classList.remove('shake'), 500);
+    const target = SHAPES.find(x => x.id === g1Target);
+    document.getElementById('g1-feedback').textContent = `Try again. 再找找 ${target.en} 吧！`;
+    speak('Try again.');
+  }
+}
+
+/* ================= 游戏2：形状制造机（碎片拼合版） ================= */
+let g2Target = null;
+let g2Placed = { left:false, right:false };
+let g2Lock = false;
+
+function startGame2(){
+  g2Lock = false;
+  const area = document.getElementById('g2-area');
+  area.innerHTML = `
+    <div class="game-head">
+      <h2>🛠️ 形状制造机</h2>
+      <p class="sub">找到正确的两片碎片，把它们拼成完整形状！</p>
+    </div>
+    <div class="prompt-bar">
+      <div class="prompt-en" id="g2-prompt"></div>
+      <div class="prompt-cn" id="g2-cn"></div>
+    </div>
+    <div class="maker-canvas">
+      <div class="g2-build">
+        <div class="g2-half-slot left" id="g2-slot-left"><span class="slot-hint">?</span></div>
+        <div class="g2-half-slot right" id="g2-slot-right"><span class="slot-hint">?</span></div>
+      </div>
+    </div>
+    <div class="shape-palette" id="g2-palette"></div>
+    <div class="feedback" id="g2-feedback">点击正确的碎片，把它拼上去。</div>
+    <button class="btn secondary" onclick="startGame2()">🔄 换一题</button>
+  `;
+  newGame2Round();
+}
+
+function newGame2Round(){
+  g2Lock = false;
+  g2Placed = { left:false, right:false };
+  g2Target = pick(SHAPES);
+
+  document.getElementById('g2-prompt').textContent = `Can you make a ${g2Target.en}?`;
+  document.getElementById('g2-cn').textContent = `你能做出一个${g2Target.cn}吗？`;
+  speak(`Can you make a ${g2Target.en}?`);
+
+  ['left','right'].forEach(side => {
+    const slot = document.getElementById('g2-slot-' + side);
+    slot.classList.remove('filled');
+    slot.innerHTML = '<span class="slot-hint">?</span>';
+  });
+
+  /* 生成碎片：正确两片 + 3 片干扰 */
+  const pieces = [
+    { shape: g2Target.id, side:'left',  correct:true },
+    { shape: g2Target.id, side:'right', correct:true }
+  ];
+  const others = shuffle(SHAPES.filter(s => s.id !== g2Target.id));
+  let i = 0;
+  while(pieces.length < 5 && i < others.length){
+    const o = others[i++];
+    const sd = Math.random() < 0.5 ? 'left' : 'right';
+    if(!pieces.find(p => p.shape === o.id && p.side === sd)){
+      pieces.push({ shape:o.id, side:sd, correct:false });
+    }
+  }
+  shuffle(pieces);
+
+  const palette = document.getElementById('g2-palette');
+  palette.innerHTML = '';
+  pieces.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'frag-btn';
+    btn.innerHTML = halfShapeSVG(p.shape, p.side, 46, 92, g2Target.color);
+    btn.onclick = () => handleG2Piece(btn, p);
+    palette.appendChild(btn);
+  });
+
+  document.getElementById('g2-feedback').textContent = '点击正确的碎片，把它拼上去。';
+}
+
+function handleG2Piece(btn, p){
+  if(g2Lock) return;
+
+  if(p.shape === g2Target.id){
+    g2Placed[p.side] = true;
+    btn.remove();
+
+    const slot = document.getElementById('g2-slot-' + p.side);
+    slot.classList.add('filled');
+    slot.innerHTML = halfShapeSVG(p.shape, p.side, 80, 160, g2Target.color);
+
+    addStar();
+    showToast('⭐ +1  拼上一片！', 'success');
+    speak('Good!');
+
+    if(g2Placed.left && g2Placed.right){
+      g2Lock = true;
+      document.getElementById('g2-feedback').textContent = `Yes, I can! You made a ${g2Target.en}!`;
+      speak(`Yes, I can! You made a ${g2Target.en}!`);
+      showToast('🎉 Yes, I can!', 'success');
+      setTimeout(() => newGame2Round(), 1700);
+    }else{
+      document.getElementById('g2-feedback').textContent = '很棒！再找另一片。';
+    }
+  }else{
+    btn.classList.add('shake');
+    setTimeout(() => btn.classList.remove('shake'), 500);
+    document.getElementById('g2-feedback').textContent = 'Try again. 这一片不是它的哦。';
+    speak('Try again.');
+  }
+}
+
+/* ================= 游戏3：猜猜我是谁 ================= */
+let g3State = {};
+
+function startGame3(){
+  const area = document.getElementById('g3-area');
+  area.innerHTML = `
+    <div class="game-head">
+      <h2>🌑 猜猜我是谁</h2>
+      <p class="sub">看影子，听问题，判断 Yes 或 No。</p>
+    </div>
+    <div class="prompt-bar">
+      <div class="prompt-en" id="g3-prompt"></div>
+      <div class="prompt-cn" id="g3-cn"></div>
+    </div>
+    <div class="shadow-stage" id="g3-stage"></div>
+    <div class="yesno-row" id="g3-yesno">
+      <button class="btn yes" id="g3-yes">✅ Yes</button>
+      <button class="btn no" id="g3-no">❌ No</button>
+    </div>
+    <div class="choice-area" id="g3-choice"></div>
+    <div class="feedback" id="g3-feedback">点 Yes 或 No。</div>
+    <button class="btn secondary" onclick="startGame3()">🔄 换一题</button>
+  `;
+  newGame3Round();
+}
+
+function newGame3Round(){
+  g3State = {
+    actual: pick(SHAPES),
+    asked: pick(SHAPES),
+    done: false
+  };
+  if(Math.random() < 0.5) g3State.asked = g3State.actual;
+
+  document.getElementById('g3-prompt').textContent = `Is this a ${g3State.asked.en}?`;
+  document.getElementById('g3-cn').textContent = `这是${g3State.asked.cn}吗？`;
+  speak(`Is this a ${g3State.asked.en}?`);
+
+  const stage = document.getElementById('g3-stage');
+  stage.innerHTML = `
+    <div class="shadow-shape">
+      ${shapeSVG(g3State.actual.id, 180, null, '', true)}
+    </div>
+  `;
+
+  document.getElementById('g3-yesno').style.display = 'flex';
+  document.getElementById('g3-choice').innerHTML = '';
+  document.getElementById('g3-feedback').textContent = '点 Yes 或 No。';
+  document.getElementById('g3-yes').onclick = () => handleG3Answer(true);
+  document.getElementById('g3-no').onclick = () => handleG3Answer(false);
+}
+
+function handleG3Answer(ans){
+  if(g3State.done) return;
+  const isMatch = g3State.actual.id === g3State.asked.id;
+
+  if(ans === true){
+    if(isMatch){
+      g3State.done = true;
+      addStar();
+      document.getElementById('g3-feedback').textContent = `Yes! It's a ${g3State.actual.en}.`;
+      speak(`Yes! It's a ${g3State.actual.en}.`);
+      showToast('⭐ +1  Yes!', 'success');
+      revealG3();
+      setTimeout(() => newGame3Round(), 1600);
+    }else{
+      showToast('再想想哦～', 'warn');
+      document.getElementById('g3-feedback').textContent = 'Try again. 看看影子的形状。';
+      speak('Try again.');
+    }
+  }else{
+    if(!isMatch){
+      document.getElementById('g3-yesno').style.display = 'none';
+      document.getElementById('g3-feedback').textContent = 'No! 那它到底是什么？选一选。';
+      speak('No! What is it?');
+      renderG3Choices();
+    }else{
+      showToast('再想想哦～', 'warn');
+      document.getElementById('g3-feedback').textContent = 'Try again. 它真的是这个形状吗？';
+      speak('Try again.');
+    }
+  }
+}
+
+function renderG3Choices(){
+  const choiceArea = document.getElementById('g3-choice');
+  const options = [g3State.actual];
+  while(options.length < 3){
+    const s = pick(SHAPES);
+    if(!options.find(o => o.id === s.id)) options.push(s);
+  }
+  shuffle(options);
+
+  choiceArea.innerHTML = '<div class="choice-title">选择正确形状：</div>';
+  const row = document.createElement('div');
+  row.className = 'choice-row';
+
+  options.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'shape-btn';
+    btn.innerHTML = shapeSVG(s.id, 64) + `<span>${s.en}</span>`;
+    btn.onclick = () => {
+      if(g3State.done) return;
+      if(s.id === g3State.actual.id){
+        g3State.done = true;
+        addStar();
+        document.getElementById('g3-feedback').textContent = `No, it's a ${g3State.actual.en}. 答对啦！`;
+        speak(`No, it's a ${g3State.actual.en}.`);
+        showToast("⭐ +1  No, it's a ...", 'success');
+        revealG3();
+        setTimeout(() => newGame3Round(), 1800);
+      }else{
+        btn.classList.add('shake');
+        setTimeout(() => btn.classList.remove('shake'), 500);
+        document.getElementById('g3-feedback').textContent = '再选一选。';
+        speak('Try again.');
+      }
+    };
+    row.appendChild(btn);
+  });
+  choiceArea.appendChild(row);
+}
+
+function revealG3(){
+  const stage = document.getElementById('g3-stage');
+  stage.innerHTML = `
+    <div class="revealed-shape">
+      ${shapeSVG(g3State.actual.id, 180)}
+      <div class="reveal-label">${g3State.actual.en}</div>
+    </div>
+  `;
+}
+
+/* ================= 游戏4：形状停车场 ================= */
+let g4Selected = null;
+
+function startGame4(){
+  const area = document.getElementById('g4-area');
+  area.innerHTML = `
+    <div class="game-head">
+      <h2>🚗 形状停车场</h2>
+      <p class="sub">先点形状卡片，再点对应的停车场。</p>
+    </div>
+    <div class="parking-cards" id="g4-cards"></div>
+    <div class="parking-lots" id="g4-lots"></div>
+    <div class="feedback" id="g4-feedback">选中一张卡片，再点停车场。</div>
+    <button class="btn secondary" onclick="startGame4()">🔄 换一题</button>
+  `;
+  newGame4Round();
+}
+
+function newGame4Round(){
+  g4Selected = null;
+  const lotShapes = shuffle([...SHAPES]).slice(0, 4);
+  const cards = [];
+  lotShapes.forEach(s => { cards.push(s); cards.push(s); });
+  shuffle(cards);
+
+  const lotsEl = document.getElementById('g4-lots');
+  lotsEl.innerHTML = '';
+  lotShapes.forEach(s => {
+    const lot = document.createElement('button');
+    lot.className = 'parking-lot';
+    lot.dataset.shape = s.id;
+    lot.innerHTML = `
+      <div class="lot-label">${s.en}</div>
+      <div class="lot-count" id="lot-count-${s.id}">0</div>
+    `;
+    lot.onclick = () => handleG4Lot(s, lot);
+    lotsEl.appendChild(lot);
+  });
+
+  const cardsEl = document.getElementById('g4-cards');
+  cardsEl.innerHTML = '';
+  cards.forEach((s, idx) => {
+    const card = document.createElement('button');
+    card.className = 'parking-card';
+    card.dataset.shape = s.id;
+    card.dataset.idx = idx;
+    card.innerHTML = shapeSVG(s.id, 60);
+    card.onclick = () => selectG4Card(card, s);
+    cardsEl.appendChild(card);
+  });
+
+  document.getElementById('g4-feedback').textContent = '选中一张卡片，再点停车场。';
+}
+
+function selectG4Card(card, s){
+  $$('#g4-cards .parking-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  g4Selected = { card, shape: s };
+  document.getElementById('g4-feedback').textContent = `已选中 ${s.en}，现在点它的停车场。`;
+  speak(s.en);
+}
+
+function handleG4Lot(lotShape, lotEl){
+  if(!g4Selected){
+    showToast('先选一张形状卡片哦', 'warn');
+    return;
+  }
+  if(g4Selected.shape.id === lotShape.id){
+    addStar();
+    g4Selected.card.remove();
+    const countEl = document.getElementById(`lot-count-${lotShape.id}`);
+    if(countEl) countEl.textContent = Number(countEl.textContent) + 1;
+    lotEl.classList.add('correct');
+    setTimeout(() => lotEl.classList.remove('correct'), 600);
+    document.getElementById('g4-feedback').textContent = `Yes! ${lotShape.en} 停对啦！`;
+    speak(`Yes! ${lotShape.en}`);
+    showToast('⭐ +1  停对啦！', 'success');
+    g4Selected = null;
+
+    if($$('#g4-cards .parking-card').length === 0){
+      document.getElementById('g4-feedback').textContent = '全部停好啦！太棒了！';
+      speak('Great job!');
+      setTimeout(() => newGame4Round(), 1500);
+    }
+  }else{
+    g4Selected.card.classList.add('shake');
+    setTimeout(() => g4Selected.card.classList.remove('shake'), 500);
+    document.getElementById('g4-feedback').textContent = `Try again. 这张是 ${g4Selected.shape.en}。`;
+    speak('Try again.');
+  }
+}
+
+/* ================= 游戏6：形状影子配对 ================= */
+let g6Selected = null;
+
+function startGame6(){
+  const area = document.getElementById('g6-area');
+  area.innerHTML = `
+    <div class="game-head">
+      <h2>🧩 形状影子配对</h2>
+      <p class="sub">先点彩色形状，再点它的影子。</p>
+    </div>
+    <div class="match-board">
+      <div class="match-col">
+        <h3>彩色形状</h3>
+        <div class="match-list" id="g6-left-list"></div>
+      </div>
+      <div class="match-col">
+        <h3>灰色影子</h3>
+        <div class="match-list" id="g6-right-list"></div>
+      </div>
+    </div>
+    <div class="feedback" id="g6-feedback">先点左边彩色形状，再点右边影子。</div>
+    <button class="btn secondary" onclick="startGame6()">🔄 换一题</button>
+  `;
+  newGame6Round();
+}
+
+function newGame6Round(){
+  g6Selected = null;
+  const pairs = shuffle([...SHAPES]).slice(0, 5);
+  const left = shuffle([...pairs]);
+  const right = shuffle([...pairs]);
+
+  const leftList = document.getElementById('g6-left-list');
+  const rightList = document.getElementById('g6-right-list');
+  leftList.innerHTML = '';
+  rightList.innerHTML = '';
+
+  left.forEach(s => {
+    const card = document.createElement('button');
+    card.className = 'match-card left-card';
+    card.dataset.shape = s.id;
+    card.innerHTML = shapeSVG(s.id, 72) + `<span>${s.en}</span>`;
+    card.onclick = () => selectG6Left(card, s);
+    leftList.appendChild(card);
+  });
+
+  right.forEach(s => {
+    const card = document.createElement('button');
+    card.className = 'match-card right-card';
+    card.dataset.shape = s.id;
+    card.innerHTML = shapeSVG(s.id, 72, null, '', true);
+    card.onclick = () => handleG6Right(card, s);
+    rightList.appendChild(card);
+  });
+
+  document.getElementById('g6-feedback').textContent = '先点左边彩色形状，再点右边影子。';
+}
+
+function selectG6Left(card, s){
+  if(card.classList.contains('matched')) return;
+  $$('#g6-left-list .match-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  g6Selected = { card, shape: s };
+  document.getElementById('g6-feedback').textContent = `已选中 ${s.en}，找它的影子吧。`;
+  speak(s.en);
+}
+
+function handleG6Right(card, s){
+  if(card.classList.contains('matched')) return;
+  if(!g6Selected){
+    showToast('先点左边的彩色形状哦', 'warn');
+    return;
+  }
+
+  if(g6Selected.shape.id === s.id){
+    addStar();
+    g6Selected.card.classList.add('matched');
+    card.classList.add('matched');
+    g6Selected.card.classList.remove('selected');
+    g6Selected = null;
+    document.getElementById('g6-feedback').textContent = `It's a ${s.en}! 配对成功！`;
+    speak(`It's a ${s.en}!`);
+    showToast('⭐ +1  配对成功！', 'success');
+
+    if($$('#g6-left-list .match-card:not(.matched)').length === 0){
+      document.getElementById('g6-feedback').textContent = '全部配对成功！太厉害了！';
+      speak('Great job!');
+      setTimeout(() => newGame6Round(), 1500);
+    }
+  }else{
+    card.classList.add('shake');
+    setTimeout(() => card.classList.remove('shake'), 500);
+    document.getElementById('g6-feedback').textContent = 'Try again. 影子不一样哦。';
+    speak('Try again.');
+  }
+}
+
+/* ================= 游戏9：魔法袋盲盒 ================= */
+let g9State = {};
+
+function startGame9(){
+  const area = document.getElementById('g9-area');
+  area.innerHTML = `
+    <div class="game-head">
+      <h2>🎁 魔法袋盲盒</h2>
+      <p class="sub">点开盲盒，猜猜里面是什么形状。</p>
+    </div>
+    <div class="prompt-bar">
+      <div class="prompt-en" id="g9-prompt">Click the magic bag!</div>
+      <div class="prompt-cn" id="g9-cn">点击魔法袋，打开盲盒！</div>
+    </div>
+    <div class="magic-stage" id="g9-stage"></div>
+    <div class="yesno-row" id="g9-yesno" style="display:none">
+      <button class="btn yes" id="g9-yes">✅ Yes</button>
+      <button class="btn no" id="g9-no">❌ No</button>
+    </div>
+    <div class="choice-area" id="g9-choice"></div>
+    <div class="feedback" id="g9-feedback">点击魔法袋开始。</div>
+    <button class="btn secondary" onclick="startGame9()">🔄 重新开始</button>
+  `;
+  g9State = { phase:'closed', actual:null, asked:null, done:false };
+  renderG9Closed();
+}
+
+function renderG9Closed(){
+  const stage = document.getElementById('g9-stage');
+  stage.innerHTML = `<div class="magic-bag" id="g9-bag">🎁</div>`;
+  document.getElementById('g9-prompt').textContent = 'Click the magic bag!';
+  document.getElementById('g9-cn').textContent = '点击魔法袋，打开盲盒！';
+  document.getElementById('g9-yesno').style.display = 'none';
+  document.getElementById('g9-choice').innerHTML = '';
+  document.getElementById('g9-feedback').textContent = '点击魔法袋开始。';
+  document.getElementById('g9-bag').onclick = openG9;
+  speak('Click the magic bag!');
+}
+
+function openG9(){
+  if(g9State.phase !== 'closed') return;
+  g9State.phase = 'asking';
+  g9State.actual = pick(SHAPES);
+  g9State.asked = pick(SHAPES);
+  if(Math.random() < 0.5) g9State.asked = g9State.actual;
+  g9State.done = false;
+
+  document.getElementById('g9-prompt').textContent = `Is this a ${g9State.asked.en}?`;
+  document.getElementById('g9-cn').textContent = `这是${g9State.asked.cn}吗？`;
+  speak(`Is this a ${g9State.asked.en}?`);
+
+  const stage = document.getElementById('g9-stage');
+  stage.innerHTML = `
+    <div class="covered-shape">
+      ${shapeSVG(g9State.actual.id, 180, null, '', true)}
+    </div>
+  `;
+
+  document.getElementById('g9-yesno').style.display = 'flex';
+  document.getElementById('g9-feedback').textContent = '点 Yes 或 No。';
+  document.getElementById('g9-yes').onclick = () => handleG9Answer(true);
+  document.getElementById('g9-no').onclick = () => handleG9Answer(false);
+}
+
+function handleG9Answer(ans){
+  if(g9State.done || g9State.phase !== 'asking') return;
+  const isMatch = g9State.actual.id === g9State.asked.id;
+
+  if(ans === true){
+    if(isMatch){
+      g9State.done = true;
+      addStar();
+      document.getElementById('g9-feedback').textContent = `Yes! It's a ${g9State.actual.en}.`;
+      speak(`Yes! It's a ${g9State.actual.en}.`);
+      showToast('⭐ +1  Yes!', 'success');
+      revealG9();
+      setTimeout(() => {
+        g9State.phase = 'closed';
+        renderG9Closed();
+      }, 1800);
+    }else{
+      document.getElementById('g9-feedback').textContent = 'Try again. 仔细看看盲盒里的形状。';
+      speak('Try again.');
+    }
+  }else{
+    if(!isMatch){
+      document.getElementById('g9-yesno').style.display = 'none';
+      document.getElementById('g9-feedback').textContent = 'No! 那它到底是什么？选一选。';
+      speak('No! What is it?');
+      renderG9Choices();
+    }else{
+      document.getElementById('g9-feedback').textContent = 'Try again. 它真的是这个形状吗？';
+      speak('Try again.');
+    }
+  }
+}
+
+function renderG9Choices(){
+  const choiceArea = document.getElementById('g9-choice');
+  const options = [g9State.actual];
+  while(options.length < 3){
+    const s = pick(SHAPES);
+    if(!options.find(o => o.id === s.id)) options.push(s);
+  }
+  shuffle(options);
+
+  choiceArea.innerHTML = '<div class="choice-title">选择正确形状：</div>';
+  const row = document.createElement('div');
+  row.className = 'choice-row';
+
+  options.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'shape-btn';
+    btn.innerHTML = shapeSVG(s.id, 64) + `<span>${s.en}</span>`;
+    btn.onclick = () => {
+      if(g9State.done) return;
+      if(s.id === g9State.actual.id){
+        g9State.done = true;
+        addStar();
+        document.getElementById('g9-feedback').textContent = `No, it's a ${g9State.actual.en}. 答对啦！`;
+        speak(`No, it's a ${g9State.actual.en}.`);
+        showToast("⭐ +1  No, it's a ...", 'success');
+        revealG9();
+        setTimeout(() => {
+          g9State.phase = 'closed';
+          renderG9Closed();
+        }, 1800);
+      }else{
+        btn.classList.add('shake');
+        setTimeout(() => btn.classList.remove('shake'), 500);
+        document.getElementById('g9-feedback').textContent = '再选一选。';
+        speak('Try again.');
+      }
+    };
+    row.appendChild(btn);
+  });
+  choiceArea.appendChild(row);
+}
+
+function revealG9(){
+  const stage = document.getElementById('g9-stage');
+  stage.innerHTML = `
+    <div class="revealed-shape">
+      ${shapeSVG(g9State.actual.id, 180)}
+      <div class="reveal-label">${g9State.actual.en}</div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>
